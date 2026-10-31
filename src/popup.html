@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>浮笺</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="../icons/icon48.png" width="34" height="34" alt="" class="brand-icon">
+      <div class="brand-copy">
+        <h1>浮笺</h1>
+        <p>网页悬浮备注</p>
+      </div>
+    </div>
+    <button type="button" class="icon-button" id="open-options" title="打开设置" aria-label="打开设置">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M19.2 14.6a1.7 1.7 0 0 0 .34 1.87l.06.06-2.01 2.01-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56v.09h-2.84v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06-2.01-2.01.06-.06a1.7 1.7 0 0 0 .34-1.87A1.7 1.7 0 0 0 5.6 13.6h-.09v-2.84h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06 2.01-2.01.06.06a1.7 1.7 0 0 0 1.87.34 1.7 1.7 0 0 0 1.03-1.56v-.09h2.84v.09a1.7 1.7 0 0 0 1.11 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06 2.01 2.01-.06.06a1.7 1.7 0 0 0-.34 1.87 1.7 1.7 0 0 0 1.56 1.03h.09v2.84h-.09a1.7 1.7 0 0 0-1.47 1.03Z"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <section class="page-card" aria-labelledby="current-page-title">
+      <div class="page-heading">
+        <div class="site-avatar" id="site-avatar" aria-hidden="true">F</div>
+        <div class="page-meta">
+          <h2 id="current-page-title">正在读取当前页面…</h2>
+          <p id="page-url" class="url-line">—</p>
+        </div>
+        <span class="state-badge" id="note-state">…</span>
+      </div>
+      <p class="page-note" id="note-preview">备注会随页面自动切换。</p>
+      <button type="button" class="primary-button" id="open-panel">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="m13.5 6.5 3 3"/></svg>
+        <span>显示并编辑备注</span>
+      </button>
+      <p class="unsupported" id="unsupported" hidden>浏览器内置页面、应用商店等页面不允许扩展注入内容，请打开普通网页使用。</p>
+    </section>
+
+    <section class="settings-section" aria-labelledby="position-title">
+      <div class="section-heading">
+        <h2 id="position-title">面板位置</h2>
+        <button type="button" class="link-button" id="reset-position">恢复右上角</button>
+      </div>
+      <div class="position-grid" id="position-grid" role="group" aria-label="面板停靠位置">
+        <button type="button" class="position-option" data-corner="top-left" aria-label="左上角">
+          <span class="mini-viewport"><i></i></span><span>左上</span>
+        </button>
+        <button type="button" class="position-option is-active" data-corner="top-right" aria-label="右上角">
+          <span class="mini-viewport"><i></i></span><span>右上</span>
+        </button>
+        <button type="button" class="position-option" data-corner="bottom-left" aria-label="左下角">
+          <span class="mini-viewport"><i></i></span><span>左下</span>
+        </button>
+        <button type="button" class="position-option" data-corner="bottom-right" aria-label="右下角">
+          <span class="mini-viewport"><i></i></span><span>右下</span>
+        </button>
+      </div>
+      <p class="field-hint" id="position-hint">也可以直接拖动页面中面板的标题栏。</p>
+    </section>
+
+    <section class="settings-section" aria-labelledby="appearance-title">
+      <div class="section-heading">
+        <h2 id="appearance-title">外观</h2>
+        <span class="value-label" id="width-value">360 px</span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">主题</span>
+        <div class="segmented" id="theme-control" role="group" aria-label="主题">
+          <button type="button" data-theme="auto">自动</button>
+          <button type="button" data-theme="light">浅色</button>
+          <button type="button" data-theme="dark">深色</button>
+        </div>
+      </div>
+      <div class="field-row width-row">
+        <label class="field-label" for="width-range">宽度</label>
+        <input type="range" id="width-range" min="300" max="520" step="10" value="360" aria-label="面板宽度">
+      </div>
+      <p class="field-hint">位置与宽度会应用到所有网页；备注内容按网址分别保存。</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <button type="button" class="manage-button" id="manage-notes">
+      <span class="manage-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M5 4.5h11.5A2.5 2.5 0 0 1 19 7v12.5H7.5A2.5 2.5 0 0 1 5 17V4.5Z"/><path d="M8 8h7M8 11.5h7M8 15h4"/></svg>
+      </span>
+      <span>管理全部备注</span>
+      <span class="count-pill" id="note-count">0</span>
+      <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+    </button>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="shared.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

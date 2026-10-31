@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>浮笺 · 设置与备注库</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <img src="../icons/icon48.png" width="38" height="38" alt="" class="brand-icon">
+        <div>
+          <div class="brand-name">浮笺</div>
+          <div class="brand-sub">网页悬浮备注</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span class="storage-pill">
+          <span class="storage-dot" aria-hidden="true"></span>
+          仅保存在本机
+        </span>
+        <span class="version-pill">v1.0.1</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">FLOATNOTE</p>
+        <h1>每一个网页，<br><span>都有一页自己的便笺。</span></h1>
+        <p class="hero-lead">悬浮在页面边缘，按网址自动切换。用多级列表整理重点，不打断正在做的事。</p>
+      </div>
+      <div class="hero-stats" aria-label="备注统计">
+        <div class="stat">
+          <strong id="stat-notes">0</strong>
+          <span>条备注</span>
+        </div>
+        <div class="stat">
+          <strong id="stat-items">0</strong>
+          <span>个列表项</span>
+        </div>
+        <div class="stat">
+          <strong id="stat-updated">—</strong>
+          <span>最近更新</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="content-grid">
+      <section class="notes-panel" aria-labelledby="notes-title">
+        <div class="panel-heading">
+          <div>
+            <h2 id="notes-title">备注库</h2>
+            <p id="notes-subtitle">按最近更新时间排列</p>
+          </div>
+          <label class="search-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+            <input type="search" id="search-notes" placeholder="搜索标题、网址或内容" autocomplete="off" aria-label="搜索备注">
+          </label>
+        </div>
+
+        <div class="list-toolbar">
+          <span id="result-count">0 条</span>
+          <span class="toolbar-hint">备注内容只保存在这台设备上</span>
+        </div>
+
+        <div class="notes-list" id="notes-list"></div>
+
+        <div class="empty-state" id="empty-state" hidden>
+          <div class="empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><rect x="9" y="7" width="30" height="34" rx="5"/><path d="M16 16h16M16 23h16M16 30h9"/></svg>
+          </div>
+          <h3 id="empty-title">还没有备注</h3>
+          <p id="empty-text">打开任意网页，点击工具栏中的浮笺图标，即可在页面右上角记录第一条备注。</p>
+        </div>
+      </section>
+
+      <aside class="rail">
+        <section class="card" aria-labelledby="appearance-title">
+          <div class="card-heading">
+            <span class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.9-.8 1.9-1.8 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.2 0-.9.7-1.6 1.6-1.6h1.6a4.4 4.4 0 0 0 4.4-4.4c0-3.7-3.8-6.7-8.5-6.7Z"/><circle cx="7.8" cy="11.4" r=".9" fill="currentColor" stroke="none"/><circle cx="10.5" cy="7.9" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="7.9" r=".9" fill="currentColor" stroke="none"/><circle cx="17.5" cy="11" r=".9" fill="currentColor" stroke="none"/></svg>
+            </span>
+            <div>
+              <h2 id="appearance-title">面板设置</h2>
+              <p>对所有网页生效</p>
+            </div>
+          </div>
+
+          <div class="control-block">
+            <div class="control-label">
+              <span>停靠位置</span>
+              <button type="button" class="text-action" id="reset-position">恢复默认</button>
+            </div>
+            <div class="position-grid" id="position-grid" role="group" aria-label="面板停靠位置">
+              <button type="button" class="position-option" data-corner="top-left" aria-label="左上角">
+                <span class="mini-viewport"><i></i></span>
+                <span>左上角</span>
+              </button>
+              <button type="button" class="position-option" data-corner="top-right" aria-label="右上角">
+                <span class="mini-viewport"><i></i></span>
+                <span>右上角</span>
+              </button>
+              <button type="button" class="position-option" data-corner="bottom-left" aria-label="左下角">
+                <span class="mini-viewport"><i></i></span>
+                <span>左下角</span>
+              </button>
+              <button type="button" class="position-option" data-corner="bottom-right" aria-label="右下角">
+                <span class="mini-viewport"><i></i></span>
+                <span>右下角</span>
+              </button>
+            </div>
+            <p class="control-hint" id="position-hint">拖动页面中面板的标题栏，可以自由摆放。</p>
+          </div>
+
+          <div class="control-block">
+            <div class="control-label">
+              <span>主题</span>
+            </div>
+            <div class="segmented" id="theme-control" role="group" aria-label="面板主题">
+              <button type="button" data-theme="auto">跟随系统</button>
+              <button type="button" data-theme="light">浅色</button>
+              <button type="button" data-theme="dark">深色</button>
+            </div>
+          </div>
+
+          <div class="control-block">
+            <div class="control-label">
+              <span>面板宽度</span>
+              <span class="value-label" id="width-value">360 px</span>
+            </div>
+            <input type="range" id="width-range" min="300" max="520" step="10" value="360" aria-label="面板宽度">
+            <div class="range-scale" aria-hidden="true"><span>窄</span><span>宽</span></div>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="data-title">
+          <div class="card-heading">
+            <span class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>
+            </span>
+            <div>
+              <h2 id="data-title">数据管理</h2>
+              <p>备份、迁移或清理</p>
+            </div>
+          </div>
+          <div class="data-actions">
+            <button type="button" class="secondary-button" id="export-data">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>
+              导出备份
+            </button>
+            <button type="button" class="secondary-button" id="import-data">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 20h14"/></svg>
+              导入备份
+            </button>
+          </div>
+          <button type="button" class="danger-link" id="clear-data">删除全部备注</button>
+          <p class="control-hint">导出文件为 JSON 格式，包含全部备注与外观设置。</p>
+          <input type="file" id="import-file" accept="application/json,.json" hidden>
+        </section>
+
+        <section class="tip-card">
+          <div class="tip-title">
+            <span aria-hidden="true">⌘</span>
+            小提示
+          </div>
+          <ul>
+            <li>备注按网址保存，页面内 <code>#锚点</code> 不会拆成新备注。</li>
+            <li>编辑时按 <kbd>Tab</kbd> 缩进、<kbd>Shift</kbd> + <kbd>Tab</kbd> 减少层级。</li>
+            <li>粘贴多行文本时，按两个空格的缩进自动生成多级列表。</li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+
+    <footer class="page-footer">
+      <span>浮笺 · 网页悬浮备注</span>
+      <span>适配 Chrome 102 及以上 · 数据只存储在本机</span>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-title">
+    <form method="dialog">
+      <h2 id="confirm-title">确认操作</h2>
+      <p id="confirm-message"></p>
+      <div class="dialog-actions">
+        <button type="submit" value="cancel" class="dialog-cancel" id="confirm-cancel">取消</button>
+        <button type="button" class="dialog-confirm" id="confirm-accept">确认</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="shared.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
