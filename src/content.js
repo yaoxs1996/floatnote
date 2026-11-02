@@ -40,6 +40,7 @@
     listStyle: 'bullet',
     activeItemId: '',
     rowSeq: 0,
+    foldedSections: Object.create(null),
     lastSavedAt: 0,
     ready: false,
     switchingUrl: false,
@@ -231,7 +232,7 @@
     '  stroke-linecap: round;',
     '  stroke-linejoin: round;',
     '}',
-    '.fn-icon-btn:focus-visible, .fn-tool-btn:focus-visible, .fn-primary:focus-visible, .fn-done:focus-visible, .fn-row-del:focus-visible {',
+    '.fn-icon-btn:focus-visible, .fn-tool-btn:focus-visible, .fn-primary:focus-visible, .fn-done:focus-visible, .fn-row-del:focus-visible, .fn-fold-toggle:focus-visible {',
     '  outline: 2px solid var(--fn-accent);',
     '  outline-offset: 2px;',
     '}',
@@ -347,6 +348,41 @@
     '  white-space: pre-wrap;',
     '}',
     '.fn-view-row.is-deep .fn-view-text { color: var(--fn-muted); }',
+    '.fn-fold-toggle {',
+    '  display: inline-flex;',
+    '  flex: 0 0 auto;',
+    '  align-items: center;',
+    '  justify-content: center;',
+    '  gap: 2px;',
+    '  min-width: 28px;',
+    '  height: 21px;',
+    '  padding: 0 4px;',
+    '  margin-top: 1px;',
+    '  color: var(--fn-faint);',
+    '  background: transparent;',
+    '  border: 0;',
+    '  border-radius: 6px;',
+    '  font-family: var(--fn-mono);',
+    '  font-size: 9.5px;',
+    '  line-height: 1;',
+    '  cursor: pointer;',
+    '  opacity: 0.72;',
+    '}',
+    '.fn-fold-toggle:hover { color: var(--fn-accent); background: var(--fn-soft); opacity: 1; }',
+    '.fn-fold-toggle.is-collapsed { color: var(--fn-accent); background: var(--fn-accent-soft); opacity: 1; }',
+    '.fn-fold-toggle svg {',
+    '  width: 11px;',
+    '  height: 11px;',
+    '  fill: none;',
+    '  stroke: currentColor;',
+    '  stroke-width: 1.9;',
+    '  stroke-linecap: round;',
+    '  stroke-linejoin: round;',
+    '  transition: transform 140ms ease;',
+    '}',
+    '.fn-fold-toggle.is-collapsed svg { transform: rotate(-90deg); }',
+    '.fn-fold-count { font-size: 9.5px; line-height: 1; }',
+    '.fn-view-row.is-folded .fn-view-text { color: var(--fn-muted); }',
     '.fn-empty-list {',
     '  margin: 8px 0 0;',
     '  color: var(--fn-muted);',
@@ -532,6 +568,7 @@
     '@media (prefers-reduced-motion: reduce) {',
     '  .fn-card, .fn-card.fn-flash { animation: none !important; }',
     '  .fn-status.is-saving .fn-status-dot { animation: none; }',
+    '  .fn-fold-toggle svg { transition: none; }',
     '}',
     '@media (hover: none) {',
     '  .fn-row-del { opacity: 0.55; }',
@@ -764,11 +801,20 @@
       event.preventDefault();
       removeItem(del.closest('.fn-edit-row').getAttribute('data-id'));
     });
-    els.note.addEventListener('dblclick', function (event) {
-      if (!state.editing) {
-        event.preventDefault();
-        startEditing();
+    els.list.addEventListener('click', function (event) {
+      var toggle = event.target.closest('.fn-fold-toggle');
+      if (!toggle) {
+        return;
       }
+      event.preventDefault();
+      toggleSection(toggle.getAttribute('data-fold-key'));
+    });
+    els.note.addEventListener('dblclick', function (event) {
+      if (state.editing || event.target.closest('.fn-fold-toggle')) {
+        return;
+      }
+      event.preventDefault();
+      startEditing();
     });
 
     bindDrag();
@@ -992,6 +1038,72 @@
     host.style.setProperty('bottom', 'auto', 'important');
   }
 
+  function foldHash(text) {
+    var hash = 2166136261;
+    for (var i = 0; i < text.length; i += 1) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(36);
+  }
+
+  function foldKeyFor(text, occurrence) {
+    return occurrence + '-' + foldHash(text);
+  }
+
+  function foldedSectionsForUrl() {
+    if (!state.foldedSections[state.url]) {
+      state.foldedSections[state.url] = Object.create(null);
+    }
+    return state.foldedSections[state.url];
+  }
+
+  function annotateViewSections(items) {
+    var occurrences = Object.create(null);
+    var folded = foldedSectionsForUrl();
+    for (var i = 0; i < items.length; i += 1) {
+      var item = items[i];
+      if (item.d !== 0) {
+        continue;
+      }
+      var base = String(item.t || '').trim();
+      var occurrence = occurrences[base] || 0;
+      occurrences[base] = occurrence + 1;
+      var end = i + 1;
+      while (end < items.length && items[end].d > 0) {
+        end += 1;
+      }
+      item.foldKey = foldKeyFor(base, occurrence);
+      item.childCount = end - i - 1;
+      item.hasChildren = item.childCount > 0;
+      item.folded = item.hasChildren && !!folded[item.foldKey];
+      item.subtreeEnd = end;
+    }
+    return items;
+  }
+
+  function toggleSection(key) {
+    if (!key) {
+      return;
+    }
+    var folded = foldedSectionsForUrl();
+    var main = els.list.closest('.fn-main');
+    var scrollTop = main ? main.scrollTop : 0;
+    if (folded[key]) {
+      delete folded[key];
+    } else {
+      folded[key] = true;
+    }
+    renderView();
+    if (main) {
+      main.scrollTop = scrollTop;
+    }
+    var nextToggle = els.list.querySelector('.fn-fold-toggle[data-fold-key="' + key + '"]');
+    if (nextToggle) {
+      nextToggle.focus({ preventScroll: true });
+    }
+  }
+
   function renderView() {
     var note = state.note;
     if (!note || !FN.noteHasContent(note)) {
@@ -1007,14 +1119,20 @@
     els.noteTitle.textContent = title;
     els.noteTitle.hidden = !title;
 
-    var items = (note.items || []).filter(function (item) {
+    var items = annotateViewSections((note.items || []).filter(function (item) {
       return String(item.t || '').trim().length > 0;
-    });
+    }));
     els.list.textContent = '';
     var counters = [];
-    items.forEach(function (item) {
+    var skipUntil = -1;
+    for (var index = 0; index < items.length; index += 1) {
+      if (index < skipUntil) {
+        continue;
+      }
+      var item = items[index];
+      var isFolded = item.d === 0 && item.hasChildren && item.folded;
       var row = document.createElement('div');
-      row.className = 'fn-view-row' + (item.d >= 2 ? ' is-deep' : '');
+      row.className = 'fn-view-row' + (item.d >= 2 ? ' is-deep' : '') + (isFolded ? ' is-folded' : '');
       row.setAttribute('role', 'listitem');
       row.style.setProperty('--fn-depth', String(item.d));
 
@@ -1033,8 +1151,26 @@
 
       row.appendChild(marker);
       row.appendChild(text);
+
+      if (item.d === 0 && item.hasChildren) {
+        var toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'fn-fold-toggle' + (isFolded ? ' is-collapsed' : '');
+        toggle.setAttribute('data-fold-key', item.foldKey);
+        toggle.setAttribute('aria-expanded', isFolded ? 'false' : 'true');
+        toggle.setAttribute('aria-label',
+          (isFolded ? '展开' : '收起') + '子项，共 ' + item.childCount + ' 项');
+        toggle.title = (isFolded ? '展开' : '收起') + ' ' + item.childCount + ' 个子项';
+        toggle.innerHTML = '<span class="fn-fold-count">' + item.childCount + '</span>' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+        row.appendChild(toggle);
+      }
+
       els.list.appendChild(row);
-    });
+      if (isFolded) {
+        skipUntil = item.subtreeEnd;
+      }
+    }
     els.emptyList.hidden = items.length > 0;
   }
 
@@ -1275,6 +1411,7 @@
       state.note = state.notes[state.url] || null;
       state.editorItems = [];
       state.activeItemId = '';
+      state.foldedSections[state.url] = Object.create(null);
       render();
       if (typeof callback === 'function') {
         callback(null);
