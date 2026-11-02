@@ -41,6 +41,8 @@
     activeItemId: '',
     rowSeq: 0,
     foldedSections: Object.create(null),
+    noteInherited: false,
+    editUrl: '',
     lastSavedAt: 0,
     ready: false,
     switchingUrl: false,
@@ -103,6 +105,7 @@
     '  display: flex;',
     '  flex-direction: column;',
     '  width: 100%;',
+    '  height: var(--fn-height, auto);',
     '  max-height: var(--fn-max-height, calc(100vh - 24px));',
     '  overflow: hidden;',
     '  color: var(--fn-text);',
@@ -182,12 +185,18 @@
     '.fn-mark i:nth-child(3) { width: 52%; }',
     '.fn-headings { min-width: 0; }',
     '.fn-kicker {',
+    '  display: block;',
+    '  max-width: 205px;',
+    '  overflow: hidden;',
     '  color: var(--fn-accent);',
     '  font-size: 9.5px;',
     '  font-weight: 700;',
     '  line-height: 1.2;',
     '  letter-spacing: 0.14em;',
+    '  text-overflow: ellipsis;',
+    '  white-space: nowrap;',
     '}',
+    '.fn-kicker.is-inherited { color: var(--fn-muted); letter-spacing: 0.06em; }',
     '.fn-site {',
     '  max-width: 205px;',
     '  margin-top: 2px;',
@@ -383,6 +392,40 @@
     '.fn-fold-toggle.is-collapsed svg { transform: rotate(-90deg); }',
     '.fn-fold-count { font-size: 9.5px; line-height: 1; }',
     '.fn-view-row.is-folded .fn-view-text { color: var(--fn-muted); }',
+    '.fn-resize-handle {',
+    '  position: absolute;',
+    '  z-index: 6;',
+    '  display: flex;',
+    '  align-items: center;',
+    '  justify-content: center;',
+    '  width: 18px;',
+    '  height: 18px;',
+    '  color: var(--fn-faint);',
+    '  background: var(--fn-bg-solid);',
+    '  border: 1px solid var(--fn-border-strong);',
+    '  border-radius: 50%;',
+    '  box-shadow: 0 2px 7px rgba(28, 32, 55, 0.16);',
+    '  opacity: 0.78;',
+    '  cursor: nwse-resize;',
+    '  user-select: none;',
+    '  touch-action: none;',
+    '}',
+    '.fn-resize-handle:hover { color: var(--fn-accent); border-color: var(--fn-accent); opacity: 1; }',
+    '.fn-resize-handle.is-left { left: -8px; }',
+    '.fn-resize-handle.is-right { right: -8px; }',
+    '.fn-resize-handle.is-top { top: -8px; }',
+    '.fn-resize-handle.is-bottom { bottom: -8px; }',
+    '.fn-resize-handle.is-nesw { cursor: nesw-resize; }',
+    '.fn-resize-handle.is-nwse { cursor: nwse-resize; }',
+    '.fn-resize-handle svg {',
+    '  width: 10px;',
+    '  height: 10px;',
+    '  fill: none;',
+    '  stroke: currentColor;',
+    '  stroke-width: 1.5;',
+    '  stroke-linecap: round;',
+    '  stroke-linejoin: round;',
+    '}',
     '.fn-empty-list {',
     '  margin: 8px 0 0;',
     '  color: var(--fn-muted);',
@@ -550,6 +593,7 @@
     '.fn-done:hover { background: var(--fn-accent-strong); }',
     '.fn-done:disabled { opacity: 0.55; cursor: wait; }',
     '.fn-card.is-collapsed .fn-main, .fn-card.is-collapsed .fn-footer { display: none; }',
+    '.fn-card.is-collapsed { height: auto; }',
     '.fn-card.is-collapsed .fn-header { padding-bottom: 12px; }',
     '.fn-card.is-collapsed .fn-mark { width: 28px; height: 28px; }',
     '.fn-card.is-collapsed #fn-collapse svg { transform: rotate(180deg); }',
@@ -582,7 +626,7 @@
     '    <div class="fn-brand" id="fn-drag-handle" title="拖动调整位置">',
     '      <span class="fn-mark" aria-hidden="true"><i></i><i></i><i></i></span>',
     '      <span class="fn-headings">',
-    '        <span class="fn-kicker">本页备注</span>',
+    '        <span class="fn-kicker" id="fn-kicker">本页备注</span>',
     '        <span class="fn-site" id="fn-site"></span>',
     '      </span>',
     '    </div>',
@@ -603,8 +647,7 @@
     '      <div class="fn-empty" id="fn-empty">',
     '        <span class="fn-empty-art" aria-hidden="true"><i></i><i></i><i></i><i></i></span>',
     '        <h2>还没有本页备注</h2>',
-    '        <p>记录这一页的要点。按 Tab 缩进，即可创建多级列表。</p>',
-    '        <button type="button" class="fn-primary" id="fn-start">开始记录</button>',
+    '        <p>点击面板右上角的铅笔按钮开始记录。按 Tab 缩进，即可创建多级列表。</p>',
     '      </div>',
     '      <div class="fn-note" id="fn-note" hidden>',
     '        <h2 class="fn-note-title" id="fn-note-title"></h2>',
@@ -643,6 +686,9 @@
     '      <button type="button" class="fn-done" id="fn-done" hidden>完成</button>',
     '    </span>',
     '  </footer>',
+    '</div>',
+    '<div class="fn-resize-handle" id="fn-resize-handle" role="separator" aria-label="拖动调整面板大小" title="拖动调整大小；双击恢复自动高度">',
+    '  <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 13 13 5M8.5 13 13 8.5M12 13l1-1"/></svg>',
     '</div>'
   ].join('\n');
 
@@ -671,10 +717,12 @@
 
     els.card = shadow.querySelector('.fn-card');
     els.dragHandle = shadow.getElementById('fn-drag-handle');
+    els.kicker = shadow.getElementById('fn-kicker');
     els.site = shadow.getElementById('fn-site');
     els.edit = shadow.getElementById('fn-edit');
     els.collapse = shadow.getElementById('fn-collapse');
     els.close = shadow.getElementById('fn-close');
+    els.resize = shadow.getElementById('fn-resize-handle');
     els.view = shadow.getElementById('fn-view');
     els.empty = shadow.getElementById('fn-empty');
     els.note = shadow.getElementById('fn-note');
@@ -687,7 +735,6 @@
     els.status = shadow.getElementById('fn-status');
     els.statusText = shadow.getElementById('fn-status-text');
     els.done = shadow.getElementById('fn-done');
-    els.start = shadow.getElementById('fn-start');
     els.styleBullet = shadow.getElementById('fn-style-bullet');
     els.styleNumber = shadow.getElementById('fn-style-number');
     els.indent = shadow.getElementById('fn-indent');
@@ -699,9 +746,6 @@
   }
 
   function bindEvents() {
-    els.start.addEventListener('click', function () {
-      startEditing();
-    });
     els.edit.addEventListener('click', function () {
       if (state.editing) {
         finishEditing();
@@ -809,15 +853,9 @@
       event.preventDefault();
       toggleSection(toggle.getAttribute('data-fold-key'));
     });
-    els.note.addEventListener('dblclick', function (event) {
-      if (state.editing || event.target.closest('.fn-fold-toggle')) {
-        return;
-      }
-      event.preventDefault();
-      startEditing();
-    });
 
     bindDrag();
+    bindResize();
     bindUrlWatcher();
   }
 
@@ -884,11 +922,125 @@
       if (moved) {
         state.settings.customX = Math.round(rect.left);
         state.settings.customY = Math.round(rect.top);
+        updateResizeHandle();
         FN.saveSettings(state.settings, function (error, saved) {
           if (!error) {
             state.settings = saved;
           }
         });
+      }
+    }
+
+    window.addEventListener('pointermove', onMove, true);
+    window.addEventListener('pointerup', onUp, true);
+    window.addEventListener('pointercancel', onUp, true);
+  }
+
+  function bindResize() {
+    var resize = null;
+    var lastTap = null;
+
+    function saveSize() {
+      FN.saveSettings(state.settings, function (error, saved) {
+        if (error) {
+          setStatus('尺寸保存失败，请重试', 'error');
+          return;
+        }
+        state.settings = saved;
+        updateResizeHandle();
+      });
+    }
+
+    function resetHeight() {
+      if (state.settings.height == null) {
+        return;
+      }
+      state.settings.height = null;
+      applyHeight();
+      saveSize();
+    }
+
+    els.resize.addEventListener('pointerdown', function (event) {
+      if (event.button !== 0 || event.isPrimary === false) {
+        return;
+      }
+      var rect = host.getBoundingClientRect();
+      var anchors = resizeAnchors();
+      resize = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        startWidth: rect.width,
+        startHeight: rect.height,
+        rect: rect,
+        freeLeft: anchors.freeLeft,
+        freeTop: anchors.freeTop,
+        moved: false
+      };
+      try {
+        els.resize.setPointerCapture(event.pointerId);
+      } catch (error) {
+        // window 监听仍然可以接收移动事件。
+      }
+      event.preventDefault();
+      event.stopPropagation();
+    });
+
+    function onMove(event) {
+      if (!resize || event.pointerId !== resize.pointerId) {
+        return;
+      }
+      var dx = event.clientX - resize.startX;
+      var dy = event.clientY - resize.startY;
+      if (!resize.moved) {
+        if (Math.abs(dx) < 3 && Math.abs(dy) < 3) {
+          return;
+        }
+        resize.moved = true;
+      }
+      var width = resize.startWidth + (resize.freeLeft ? -dx : dx);
+      var height = resize.startHeight + (resize.freeTop ? -dy : dy);
+      var maxWidth = resize.freeLeft
+        ? resize.rect.right - 8
+        : window.innerWidth - resize.rect.left - 8;
+      var maxHeight = resize.freeTop
+        ? resize.rect.bottom - 8
+        : window.innerHeight - resize.rect.top - 8;
+      width = Math.max(FN.LIMITS.widthMin, Math.min(FN.LIMITS.widthMax, maxWidth, width));
+      height = Math.max(FN.LIMITS.heightMin, Math.min(FN.LIMITS.heightMax, maxHeight, height));
+      state.settings.width = Math.round(width);
+      state.settings.height = Math.round(height);
+      applyWidth();
+      applyHeight();
+      event.preventDefault();
+    }
+
+    function onUp(event) {
+      if (!resize || event.pointerId !== resize.pointerId) {
+        return;
+      }
+      var moved = resize.moved;
+      resize = null;
+      try {
+        els.resize.releasePointerCapture(event.pointerId);
+      } catch (error) {
+        // 忽略不支持或已释放的 capture。
+      }
+      if (moved) {
+        lastTap = null;
+        saveSize();
+        return;
+      }
+      // 用两次无拖动的点击实现“双击恢复自动高度”，避免依赖指针事件的
+      // preventDefault 后是否还会派发 dblclick。
+      var now = Date.now();
+      if (lastTap && now - lastTap.time < 450 &&
+          Math.abs(event.clientX - lastTap.x) < 8 &&
+          Math.abs(event.clientY - lastTap.y) < 8) {
+        lastTap = null;
+        resetHeight();
+      } else {
+        lastTap = { time: now, x: event.clientX, y: event.clientY };
       }
     }
 
@@ -934,9 +1086,33 @@
     render();
   }
 
+  function resolveCurrentNote() {
+    var resolved = FN.resolveNote(state.notes, state.url);
+    state.note = resolved ? resolved.note : null;
+    state.noteInherited = !!(resolved && resolved.inherited);
+    // 继承来的备注只进入阅读视图；点击编辑后会在当前网址创建独立备注。
+    state.editUrl = resolved && !resolved.inherited ? resolved.url : state.url;
+  }
+
+  function updateScopeLabel() {
+    if (!els.kicker) {
+      return;
+    }
+    if (state.note && state.noteInherited) {
+      var pathLabel = FN.getPathLabel(state.note.url) || '/';
+      els.kicker.textContent = '继承自 ' + pathLabel;
+      els.kicker.title = '当前页继承 ' + state.note.url + ' 的备注；点击编辑会为本页创建独立备注';
+      els.kicker.classList.add('is-inherited');
+    } else {
+      els.kicker.textContent = '本页备注';
+      els.kicker.removeAttribute('title');
+      els.kicker.classList.remove('is-inherited');
+    }
+  }
+
   function setUrlState(url) {
     state.url = url;
-    state.note = state.notes[url] || null;
+    resolveCurrentNote();
     state.editorItems = [];
     state.activeItemId = '';
   }
@@ -947,8 +1123,11 @@
     }
     applyTheme();
     applyWidth();
+    applyHeight();
     applyPosition();
     applyCollapsed();
+    updateResizeHandle();
+    updateScopeLabel();
     els.site.textContent = FN.getUrlLabel(state.url);
     els.site.title = state.url;
 
@@ -984,11 +1163,43 @@
     host.style.setProperty('max-width', 'calc(100vw - 16px)', 'important');
   }
 
+  function applyHeight() {
+    var height = state.settings.height;
+    host.style.setProperty('--fn-height',
+      height == null ? 'auto' : height + 'px');
+  }
+
+  function resizeAnchors() {
+    var custom = state.settings.customX !== null && state.settings.customY !== null;
+    var corner = state.settings.corner;
+    return {
+      freeLeft: !custom && corner.indexOf('right') >= 0,
+      freeTop: !custom && corner.indexOf('bottom') === 0
+    };
+  }
+
+  function updateResizeHandle() {
+    if (!els.resize) {
+      return;
+    }
+    var anchors = resizeAnchors();
+    els.resize.classList.toggle('is-left', anchors.freeLeft);
+    els.resize.classList.toggle('is-right', !anchors.freeLeft);
+    els.resize.classList.toggle('is-top', anchors.freeTop);
+    els.resize.classList.toggle('is-bottom', !anchors.freeTop);
+    els.resize.classList.toggle('is-nesw', anchors.freeLeft !== anchors.freeTop);
+    els.resize.classList.toggle('is-nwse', anchors.freeLeft === anchors.freeTop);
+    els.resize.hidden = state.collapsed;
+  }
+
   function applyCollapsed() {
     els.card.classList.toggle('is-collapsed', state.collapsed);
     els.collapse.title = state.collapsed ? '展开备注' : '收起备注';
     els.collapse.setAttribute('aria-label', state.collapsed ? '展开备注' : '收起备注');
     els.collapse.setAttribute('aria-expanded', state.collapsed ? 'false' : 'true');
+    if (els.resize) {
+      els.resize.hidden = state.collapsed;
+    }
   }
 
   function applyPosition() {
@@ -1372,6 +1583,7 @@
     if (!source) {
       return;
     }
+    state.editUrl = state.note && !state.noteInherited ? state.note.url : state.url;
     state.editorTitle = source.title || '';
     state.listStyle = source.listStyle === 'number' ? 'number' : 'bullet';
     state.editorItems = (source.items || []).map(function (item) {
@@ -1408,7 +1620,7 @@
         return;
       }
       state.editing = false;
-      state.note = state.notes[state.url] || null;
+      resolveCurrentNote();
       state.editorItems = [];
       state.activeItemId = '';
       state.foldedSections[state.url] = Object.create(null);
@@ -1461,10 +1673,11 @@
   }
 
   function buildNoteSnapshot() {
-    var source = state.note;
+    var targetUrl = state.editUrl || state.url;
+    var source = state.note && state.note.url === targetUrl ? state.note : null;
     var now = Date.now();
     return {
-      url: state.url,
+      url: targetUrl,
       title: els.title ? els.title.value : state.editorTitle,
       items: state.editorItems.map(function (item) {
         return { t: item.t, d: item.d };
@@ -1520,10 +1733,16 @@
       if (saved && FN.noteHasContent(saved)) {
         state.note = saved;
         state.notes[saved.url] = saved;
+        state.editUrl = saved.url;
+        if (saved.url === state.url) {
+          state.noteInherited = false;
+        }
       } else {
         state.note = null;
-        delete state.notes[state.url];
+        delete state.notes[state.editUrl || state.url];
+        state.noteInherited = false;
       }
+      updateScopeLabel();
       if (state.saveRequested || state.dirty) {
         runSave();
         return;
@@ -1903,14 +2122,17 @@
       if (state.ready) {
         applyTheme();
         applyWidth();
+        applyHeight();
         applyPosition();
+        updateResizeHandle();
       }
     }
     if (changes[FN.STORAGE_KEYS.notes]) {
       state.notes = FN.normalizeNotes(changes[FN.STORAGE_KEYS.notes].newValue);
       if (!state.editing) {
-        state.note = state.notes[state.url] || null;
+        resolveCurrentNote();
         if (state.ready) {
+          updateScopeLabel();
           renderView();
           updateIdleStatus();
         }
@@ -1918,7 +2140,7 @@
     }
   }
 
-  function revealPanel(message) {
+  function revealPanel() {
     var wasVisible = state.visible;
     state.visible = true;
     els.card.hidden = false;
@@ -1927,7 +2149,10 @@
     state.collapsed = false;
     applyCollapsed();
     applyWidth();
+    applyHeight();
     applyPosition();
+    updateResizeHandle();
+    updateScopeLabel();
     if (!wasVisible) {
       els.card.classList.remove('fn-flash');
       // 强制重启动画。
@@ -1937,9 +2162,6 @@
         els.card.classList.remove('fn-flash');
       }, 900);
     }
-    if (message && message.action === 'edit' && !state.editing) {
-      startEditing();
-    }
     if (state.editing) {
       requestAnimationFrame(focusActiveRow);
     }
@@ -1947,6 +2169,7 @@
       ok: true,
       visible: true,
       hasNote: !!(state.note && FN.noteHasContent(state.note)),
+      inherited: state.noteInherited,
       editing: state.editing
     };
   }
@@ -1967,21 +2190,11 @@
     }
     if (message.type === 'FLOATNOTE_REVEAL') {
       if (!state.ready) {
-        state.pendingReveal = { action: message.action || 'reveal' };
+        state.pendingReveal = true;
         sendResponse({ ok: true, pending: true });
         return;
       }
-      sendResponse(revealPanel(message));
-      return;
-    }
-    if (message.type === 'FLOATNOTE_EDIT') {
-      if (!state.ready) {
-        state.pendingReveal = { action: 'edit' };
-        sendResponse({ ok: true, pending: true });
-        return;
-      }
-      var result = revealPanel({ action: 'edit' });
-      sendResponse(result);
+      sendResponse(revealPanel());
     }
   }
 
@@ -2001,12 +2214,11 @@
       }
       state.settings = data.settings;
       state.notes = data.notes;
-      state.note = state.notes[state.url] || null;
+      resolveCurrentNote();
       render();
       if (state.pendingReveal) {
-        var pending = state.pendingReveal;
-        state.pendingReveal = null;
-        revealPanel(pending);
+        state.pendingReveal = false;
+        revealPanel();
       }
     });
 

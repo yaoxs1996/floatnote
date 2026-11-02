@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "浮笺 · 网页悬浮备注",
   "short_name": "浮笺",
-  "version": "1.0.2",
-  "description": "在网页中显示可拖动的多级列表备注，支持一级折叠，按网址自动保存。默认隐藏，点击工具栏图标显示。",
+  "version": "1.0.3",
+  "description": "在网页中显示可拖动的多级列表备注，支持路径通配、一级折叠和直接拉伸。按网址自动保存，默认隐藏。",
   "minimum_chrome_version": "102",
   "permissions": [
     "storage",

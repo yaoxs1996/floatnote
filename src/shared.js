@@ -16,6 +16,8 @@
   NS.LIMITS = {
     widthMin: 300,
     widthMax: 520,
+    heightMin: 160,
+    heightMax: 1200,
     title: 120,
     item: 2000,
     items: 500,
@@ -31,6 +33,7 @@
     customX: null,
     customY: null,
     width: 360,
+    height: null,
     theme: 'auto'
   };
 
@@ -60,12 +63,14 @@
   NS.normalizeSettings = function (input) {
     var value = input && typeof input === 'object' ? input : {};
     var width = toInteger(value.width, NS.DEFAULT_SETTINGS.width);
+    var height = finiteOrNull(value.height);
     return {
       schemaVersion: NS.SCHEMA_VERSION,
       corner: NS.CORNERS.indexOf(value.corner) >= 0 ? value.corner : NS.DEFAULT_SETTINGS.corner,
       customX: finiteOrNull(value.customX),
       customY: finiteOrNull(value.customY),
       width: clamp(width, NS.LIMITS.widthMin, NS.LIMITS.widthMax),
+      height: height === null ? null : clamp(height, NS.LIMITS.heightMin, NS.LIMITS.heightMax),
       theme: NS.THEMES.indexOf(value.theme) >= 0 ? value.theme : NS.DEFAULT_SETTINGS.theme
     };
   };
@@ -126,6 +131,100 @@
     } catch (error) {
       return '';
     }
+  };
+
+  NS.getPathLabel = function (input) {
+    try {
+      var url = new URL(input);
+      if (url.protocol === 'file:') {
+        return '本地文件';
+      }
+      var path = url.pathname || '/';
+      if (path.length > 1) {
+        path = path.replace(/\/+$/, '') || '/';
+      }
+      return path;
+    } catch (error) {
+      return '';
+    }
+  };
+
+  function scopeParts(input) {
+    var normalized = NS.normalizeUrl(input);
+    if (!normalized) {
+      return null;
+    }
+    var url = new URL(normalized);
+    var path = url.pathname || '/';
+    if (path.length > 1) {
+      path = path.replace(/\/+$/, '') || '/';
+    }
+    var origin = url.protocol + '//' + url.host;
+    var search = url.search || '';
+    return {
+      url: normalized,
+      origin: origin,
+      path: path,
+      search: search,
+      hasQuery: !!search,
+      key: origin + path + search
+    };
+  }
+
+  /**
+   * 解析某个页面应使用的备注。
+   * 优先精确匹配当前网址；否则按路径逐级向上寻找最近的“前缀备注”。
+   * 例如：/s/xxx -> /s -> /。带查询参数的备注只精确匹配该完整网址。
+   */
+  NS.resolveNote = function (notes, pageUrl) {
+    var page = scopeParts(pageUrl);
+    if (!page) {
+      return null;
+    }
+    var source = notes && typeof notes === 'object' ? notes : {};
+    var best = null;
+    var bestScore = -1;
+    Object.keys(source).forEach(function (key) {
+      var note = source[key];
+      if (!note || typeof note !== 'object') {
+        return;
+      }
+      var parts = scopeParts(note.url || key);
+      if (!parts || parts.origin !== page.origin) {
+        return;
+      }
+      var exact = parts.key === page.key;
+      var score;
+      if (parts.hasQuery) {
+        // 带查询参数的备注只对同一完整网址生效，避免误覆盖其他搜索结果。
+        if (!exact) {
+          return;
+        }
+        score = 1000000 + parts.path.length;
+      } else {
+        var applies = parts.path === '/' ||
+          page.path === parts.path ||
+          page.path.indexOf(parts.path + '/') === 0;
+        if (!applies) {
+          return;
+        }
+        score = (exact ? 1000000 : 0) + parts.path.length;
+      }
+      var updatedAt = Number(note.updatedAt) || 0;
+      if (!best || score > bestScore ||
+          (score === bestScore && updatedAt > best.updatedAt)) {
+        best = { note: note, parts: parts, updatedAt: updatedAt };
+        bestScore = score;
+      }
+    });
+    if (!best) {
+      return null;
+    }
+    return {
+      note: best.note,
+      url: best.parts.url,
+      inherited: best.parts.key !== page.key
+    };
   };
 
   NS.normalizeItem = function (input) {

@@ -220,6 +220,11 @@ main {
   background: var(--success-soft);
 }
 
+.state-badge.has-note.is-inherited {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .state-badge.unavailable {
   color: var(--danger);
   background: rgba(196, 67, 88, 0.09);

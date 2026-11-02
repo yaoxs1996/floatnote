@@ -13,6 +13,8 @@
     settings: FN.normalizeSettings(null),
     notes: {},
     note: null,
+    noteInherited: false,
+    noteScope: '',
     widthTimer: null,
     toastTimer: null,
     opening: false
@@ -70,8 +72,11 @@
     });
   }
 
-  function noteForCurrentPage() {
-    return state.url ? (state.notes[state.url] || null) : null;
+  function resolvePageNote() {
+    var resolved = state.url ? FN.resolveNote(state.notes, state.url) : null;
+    state.note = resolved ? resolved.note : null;
+    state.noteInherited = !!(resolved && resolved.inherited);
+    state.noteScope = resolved ? resolved.url : '';
   }
 
   function renderCurrentPage() {
@@ -79,6 +84,7 @@
     var pageTitle = state.tab && state.tab.title ? state.tab.title : '当前页面';
     els['current-page-title'].textContent = pageTitle;
     els['current-page-title'].title = pageTitle;
+    els['note-state'].removeAttribute('title');
 
     if (!state.rawUrl) {
       els['page-url'].textContent = '无法读取页面地址';
@@ -112,16 +118,24 @@
 
     els.unsupported.hidden = true;
     els['open-panel'].disabled = false;
-    els['open-panel'].querySelector('span').textContent = note ? '显示并编辑备注' : '显示并添加备注';
+    els['open-panel'].querySelector('span').textContent = '在页面中查看';
 
     if (note) {
-      els['note-state'].textContent = '有备注';
-      els['note-state'].className = 'state-badge has-note';
-      els['note-preview'].textContent = FN.noteText(note, 150) || '备注内容为空';
+      els['note-state'].textContent = state.noteInherited ? '继承备注' : '有备注';
+      els['note-state'].className = 'state-badge has-note' + (state.noteInherited ? ' is-inherited' : '');
+      els['note-state'].title = state.noteInherited
+        ? '继承自 ' + state.noteScope
+        : '当前网址有独立备注';
+      var preview = FN.noteText(note, 150) || '备注内容为空';
+      if (state.noteInherited) {
+        preview = '继承自 ' + FN.getPathLabel(state.noteScope) + ' · ' + preview;
+      }
+      els['note-preview'].textContent = preview;
     } else {
       els['note-state'].textContent = '未记录';
       els['note-state'].className = 'state-badge';
-      els['note-preview'].textContent = '本页还没有备注。点击下方按钮，在当前页面记录要点。';
+      els['note-state'].removeAttribute('title');
+      els['note-preview'].textContent = '本页还没有备注。在页面中点击面板右上角的铅笔按钮即可记录。';
     }
   }
 
@@ -152,7 +166,7 @@
   }
 
   function renderAll() {
-    state.note = noteForCurrentPage();
+    resolvePageNote();
     renderCurrentPage();
     renderSettings();
     els['note-count'].textContent = String(Object.keys(state.notes).length);
@@ -203,7 +217,7 @@
     if (active) {
       span.textContent = label || '正在打开…';
     } else {
-      span.textContent = state.note ? '显示并编辑备注' : '显示并添加备注';
+      span.textContent = '在页面中查看';
     }
   }
 
@@ -242,7 +256,7 @@
       return;
     }
     setOpening(true);
-    sendMessageToContent('FLOATNOTE_EDIT', function (error, response) {
+    sendMessageToContent('FLOATNOTE_REVEAL', function (error, response) {
       if (!error && response && response.ok) {
         window.close();
         return;
@@ -254,7 +268,7 @@
           return;
         }
         setTimeout(function () {
-          sendMessageToContent('FLOATNOTE_EDIT', function (secondError, secondResponse) {
+          sendMessageToContent('FLOATNOTE_REVEAL', function (secondError, secondResponse) {
             if (secondError || !secondResponse || !secondResponse.ok) {
               handleOpenFailure('备注面板未能启动，请刷新页面后重试。');
               return;
@@ -335,7 +349,7 @@
       }
       if (changes[FN.STORAGE_KEYS.notes]) {
         state.notes = FN.normalizeNotes(changes[FN.STORAGE_KEYS.notes].newValue);
-        state.note = noteForCurrentPage();
+        resolvePageNote();
         renderCurrentPage();
         els['note-count'].textContent = String(Object.keys(state.notes).length);
       }

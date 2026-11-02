@@ -12,6 +12,7 @@
     customX: null,
     customY: null,
     width: 360,
+    height: null,
     theme: 'auto'
   };
 

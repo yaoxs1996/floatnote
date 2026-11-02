@@ -32,8 +32,8 @@
       </div>
       <p class="page-note" id="note-preview">备注会随页面自动切换。</p>
       <button type="button" class="primary-button" id="open-panel">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="m13.5 6.5 3 3"/></svg>
-        <span>显示并编辑备注</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+        <span>在页面中查看</span>
       </button>
       <p class="unsupported" id="unsupported" hidden>浏览器内置页面、应用商店等页面不允许扩展注入内容，请打开普通网页使用。</p>
     </section>
@@ -77,7 +77,7 @@
         <label class="field-label" for="width-range">宽度</label>
         <input type="range" id="width-range" min="300" max="520" step="10" value="360" aria-label="面板宽度">
       </div>
-      <p class="field-hint">位置与宽度会应用到所有网页；备注内容按网址分别保存。</p>
+      <p class="field-hint">位置、宽度和高度会应用到所有网页；备注按路径前缀匹配并分别保存。</p>
     </section>
   </main>
 
